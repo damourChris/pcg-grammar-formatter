@@ -21,6 +21,10 @@
       {
         "command": "pcg-formatter.format",
         "title": "Format PCG Grammar"
+      },
+      {
+        "command": "pcg-formatter.check",
+        "title": "Check PCG Grammar Syntax"
       }
     ],
     "keybindings": [
@@ -31,6 +35,25 @@
         "when": "editorTextFocus"
       }
     ],
+    "snippets": [
+      {
+        "language": "pcggrammar",
+        "path": "./snippets/snippets.json"
+      }
+    ],
+    "languages": [
+      {
+        "id": "pcggrammar",
+        "extensions": [
+          ".pcg"
+        ],
+        "aliases": [
+          "PCG Grammar",
+          "pcggrammar"
+        ],
+        "configuration": "./syntaxes/pcggrammar.tmLanguage.json"
+      }
+    ],
     "menus": {
       "editor/context": [
         {
@@ -39,6 +62,22 @@
           "group": "1_modification"
         }
       ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "PCG Grammar Formatter",
+      "properties": {
+        "pcg-formatter.indentSize": {
+          "type": "number",
+          "default": 2,
+          "description": "Number of spaces to use for indentation"
+        },
+        "pcg-formatter.useTabs": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use tabs for indentation"
+        }
+      }
     }
   },
   "scripts": {
