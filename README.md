@@ -1,71 +1,66 @@
-# pcg-grammar-formatter README
+# PCG Grammar Formatter
 
-This is the README for your extension "pcg-grammar-formatter". After writing up a brief description, we recommend including the following sections.
+## Description
+
+[PCG Grammar](https://dev.epicgames.com/documentation/en-us/unreal-engine/using-shape-grammar-with-pcg-in-unreal-engine) is a domain-specific language (DSL) for defining grammars available in Unreal Engine 5. 
+
+These grammars are used to generate procedural content, such as levels, assets, and other game elements. As these grammars can become complex and difficult to read, the PCG Grammar Formatter extension for Visual Studio Code provides a way to format and beautify these grammars, making them easier to understand and work with.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+* **Format PCG Grammar**: The extension provides a command to format PCG Grammar files, making them more readable and consistent.
 
-For example if there is an image subfolder under your extension project workspace:
+## Future Features
 
-\!\[feature X\]\(images/feature-x.png\)
+- [ ] **Syntax Highlighting**: Syntax highlighting for PCG Grammar, providing visual cues for different modules. 
+- [ ] **Code Snippets**: Code snippets for common PCG Grammar constructs
+- [ ] **Error Checking**: Error checking for PCG Grammar files,finding uncomplete or incorrect grammar definitions.
+- [ ]  **Unreal Engine Integration**: Integration with Unreal Engine to provide real-time feedback and validation of PCG Grammar files.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+<!-- \!\[feature X\]\(images/feature-x.png\) -->
+
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+* Visual Studio Code version 1.0.0 or higher
+* Unreal Engine 5.0 or higher
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+* `pcgGrammarFormatter.enable`: Enable or disable the extension.
+* `pcgGrammarFormatter.formatOnSave`: Enable or disable formatting on save.
+* `pcgGrammarFormatter.indentSize`: Set the number of spaces to use for indentation.
+* `pcgGrammarFormatter.useTabs`: Use tabs instead of spaces for indentation.
+* `pcgGrammarFormatter.maxLineLength`: Set the maximum line length for formatting.
+* `pcgGrammarFormatter.insertFinalNewline`: Insert a final newline at the end of the file.
+* `pcgGrammarFormatter.trimTrailingWhitespace`: Trim trailing whitespace on each line.
 
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+* The extension is still in development and may have bugs or incomplete features. If you encounter any issues, please report them on the [GitHub repository](https://github.com/damourChris/pcg-grammar-formatter/issues).
 
-## Release Notes
+# Release Notes
 
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
+Full changelog is available [here]()(CHANGELOG.md).
 ---
 
-## Following extension guidelines
+## Most recent release notes
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+### 0.0.1
+* Initial release of the PCG Grammar Formatter extension for Visual Studio Code.
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+# Extra Information
 
-## Working with Markdown
+## License
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+## Contributing
 
-## For more information
+Contributions are welcome! If you have suggestions for improvements or new features, please open an issue or submit a pull request on the [GitHub repository]()
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+## PCG Grammar Resources
 
-**Enjoy!**
+* [PCG Grammar Documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/using-shape-grammar-with-pcg-in-unreal-engine)
+* [PCG Grammar Examples](https://dev.epicgames.com/documentation/en-us/unreal-engine/creating-a-fence-generator-using-shape-grammar-in-unreal-engine)
