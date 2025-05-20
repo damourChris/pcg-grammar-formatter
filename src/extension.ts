@@ -20,7 +20,6 @@ class PCGFormatter {
 
 		while (i < input.length) {
 			const char = input[i];
-
 			switch (char) {
 				case '<':
 				case '[':
@@ -30,7 +29,6 @@ class PCGFormatter {
 					this.indentLevel++;
 					break;
 
-				case '>':
 				case ']':
 				case '}':
 					// Closing bracket - decrease indent and add it
@@ -52,8 +50,11 @@ class PCGFormatter {
 					break;
 
 				case ',':
-					// Comma - just add it without newline
-					result += ',\n';
+					// Comma - just add it and check for newline
+					result += ',';
+					if (i + 1 < input.length && input[i + 1] !== ' ' && input[i + 1] !== ',') {
+						result += '\n';
+					}
 					break;
 
 				case ' ':
@@ -63,10 +64,10 @@ class PCGFormatter {
 				default:
 					// Regular content - collect until we hit a special character
 					let content = '';
-					while (i < input.length && !'<>[]{}(), '.includes(input[i])) {
+					do {
 						content += input[i];
 						i++;
-					}
+					} while (i < input.length && !'<>[]{}(), '.includes(input[i]));
 					i--; // Back up one since we'll increment at the end of the loop
 
 					if (content) {
