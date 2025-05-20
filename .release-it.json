@@ -1,0 +1,26 @@
+{
+    "git": {
+        "requireCleanWorkingDir": true,
+        "tagName": "v${version}",
+        "commitMessage": "chore(release): v${version}",
+        "push": true
+    },
+    "github": {
+        "release": true,
+        "assets": [
+            "pcg-grammar-formatter-${version}.vsix"
+        ]
+    },
+    "hooks": {
+        "after:bump": "vsce package --out pcg-grammar-formatter-${version}.vsix",
+        "after:release": "vsce publish --packagePath pcg-grammar-formatter-${version}.vsix"
+    },
+    "plugins": {
+        "@release-it/conventional-changelog": {
+            "preset": {
+                "name": "angular"
+            },
+            "infile": "CHANGELOG.md"
+        }
+    }
+}
