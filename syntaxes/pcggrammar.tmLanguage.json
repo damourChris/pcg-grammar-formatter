@@ -1,0 +1,79 @@
+{
+    "name": "PCG Grammar",
+    "scopeName": "source.pcggrammar",
+    "fileTypes": [
+        "pcg"
+    ],
+    "patterns": [
+        {
+            "include": "#brackets"
+        },
+        {
+            "include": "#modules"
+        },
+        {
+            "include": "#multipliers"
+        },
+        {
+            "include": "#separators"
+        }
+    ],
+    "repository": {
+        "brackets": {
+            "patterns": [
+                {
+                    "name": "punctuation.definition.group.square.pcggrammar",
+                    "match": "\\[|\\]",
+                    "comment": "Square brackets for grouping modules"
+                },
+                {
+                    "name": "punctuation.definition.group.curly.pcggrammar",
+                    "match": "\\{|\\}",
+                    "comment": "Curly brackets for randomized module combinations"
+                },
+                {
+                    "name": "punctuation.definition.group.angle.pcggrammar",
+                    "match": "\\<|\\>",
+                    "comment": "Angle brackets for ordered module combinations"
+                }
+            ]
+        },
+        "modules": {
+            "patterns": [
+                {
+                    "name": "entity.name.module.pcggrammar",
+                    "match": "\\b[A-Za-z0-9_]+\\b",
+                    "comment": "Module identifiers"
+                }
+            ]
+        },
+        "multipliers": {
+            "patterns": [
+                {
+                    "name": "keyword.operator.multiplier.infinite.pcggrammar",
+                    "match": "\\*",
+                    "comment": "Place module as many times as possible"
+                },
+                {
+                    "name": "keyword.operator.multiplier.atleastonce.pcggrammar",
+                    "match": "\\+",
+                    "comment": "Place module at least once and then as many times as possible"
+                },
+                {
+                    "name": "constant.numeric.multiplier.pcggrammar",
+                    "match": "\\]\\d+|\\}\\d+|\\>\\d+",
+                    "comment": "Numeric multipliers after brackets"
+                }
+            ]
+        },
+        "separators": {
+            "patterns": [
+                {
+                    "name": "punctuation.separator.comma.pcggrammar",
+                    "match": ",",
+                    "comment": "Commas for separating modules"
+                }
+            ]
+        }
+    }
+}
