@@ -6,6 +6,7 @@
   "engines": {
     "vscode": "^1.100.0"
   },
+  "publisher": "damourlabs",
   "categories": [
     "Formatters",
     "Other"
