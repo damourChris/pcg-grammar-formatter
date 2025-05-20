@@ -1,0 +1,47 @@
+{
+    "Module Group": {
+        "prefix": "group",
+        "body": "[${1:moduleA}, ${2:moduleB}]",
+        "description": "Create a module group"
+    },
+    "Module Group with Multiplier": {
+        "prefix": "groupmult",
+        "body": "[${1:moduleA}, ${2:moduleB}]${3|*,+,2,3,4,5|}",
+        "description": "Create a module group with multiplier"
+    },
+    "Randomized Module Group": {
+        "prefix": "random",
+        "body": "{${1:moduleA}, ${2:moduleB}}",
+        "description": "Create a randomized module group"
+    },
+    "Ordered Module Group": {
+        "prefix": "ordered",
+        "body": "<${1:moduleA}, ${2:moduleB}>",
+        "description": "Create an ordered module group"
+    },
+    "Module with Infinite Multiplier": {
+        "prefix": "inf",
+        "body": "${1:module}*",
+        "description": "Module with infinite multiplier"
+    },
+    "Module with At Least Once Multiplier": {
+        "prefix": "once",
+        "body": "${1:module}+",
+        "description": "Module with at least once multiplier"
+    },
+    "Module with Fixed Multiplier": {
+        "prefix": "fixed",
+        "body": "${1:module}${2|*,+,2,3,4,5|}",
+        "description": "Module with fixed multiplier"
+    },
+    "Module Separator": {
+        "prefix": "sep",
+        "body": "${1:moduleA},${2:moduleB}",
+        "description": "Module separator"
+    },
+    "Module Separator with Multiplier": {
+        "prefix": "sepmult",
+        "body": "${1:moduleA},${2:moduleB}${3|*,+,2,3,4,5|}",
+        "description": "Module separator with multiplier"
+    }
+}
