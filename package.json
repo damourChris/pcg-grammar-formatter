@@ -11,6 +11,10 @@
     "Formatters",
     "Other"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/damourChris/pcg-grammar-formatter.git"
+  },
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
