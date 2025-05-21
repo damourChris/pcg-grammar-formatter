@@ -10,7 +10,9 @@ enum TokenType {
 	OpenAngleBracket = 'openAngleBracket',
 	CloseAngleBracket = 'closeAngleBracket',
 	Comma = 'comma',
+	Colon = 'colon',
 	Multiplier = 'multiplier',
+	Weight = 'weight',
 	Error = 'error'
 }
 
@@ -46,9 +48,15 @@ class PCGFormatter {
 
 	private errors: PCGError[];
 	private document?: vscode.TextDocument;
+	private lastFormatTime: number = 0;
+	private wordPatterns: { [key: string]: string } = {};
 
-	constructor(indentSize: number = 2) {
+	constructor(enable: boolean = true, indentSize: number = 2, formatOnSave: boolean = false, useTabs: boolean = false, maxLineLength: number = 80, insertNewlineAfterBrackets: boolean = true, insertNewlineBeforeBrackets: boolean = true, insertFinalNewline: boolean = true, trimTrailingWhitespace: boolean = true) {
+
 		this.indentSize = indentSize;
+		this.formatOnSave = formatOnSave;
+		this.useTabs = useTabs;
+		this.maxLineLength = maxLineLength;
 		this.indentLevel = 0;
 		this.enabled = true;
 		this.formatOnSave = false;
@@ -68,6 +76,8 @@ class PCGFormatter {
 		this.indentLevel = 0;
 		this.errors = [];
 		this.document = document;
+		this.wordPatterns = {};
+		this.extractModulePatterns(grammarString);
 
 		// Tokenize the input
 		const tokens = this.tokenize(grammarString);
@@ -78,10 +88,35 @@ class PCGFormatter {
 		// Format based on tokens
 		const formattedText = this.formatTokens(tokens);
 
+		this.lastFormatTime = Date.now();
+
 		return {
 			formattedText,
 			errors: this.errors
 		};
+	}
+
+	// Extract module patterns for syntax highlighting
+	private extractModulePatterns(input: string): void {
+		const moduleRegex = /[a-zA-Z0-9_]+/g;
+		let match;
+
+		while ((match = moduleRegex.exec(input)) !== null) {
+			const module = match[0];
+			if (!/^\d+$/.test(module)) { // Skip if it's just a number
+				this.wordPatterns[module] = module;
+			}
+		}
+	}
+
+	// Get the last formatting time
+	getLastFormatTime(): number {
+		return this.lastFormatTime;
+	}
+
+	// Get extracted module patterns for syntax highlighting
+	getWordPatterns(): { [key: string]: string } {
+		return this.wordPatterns;
 	}
 
 	// Tokenize the input string into PCG grammar tokens
@@ -156,21 +191,34 @@ class PCGFormatter {
 				case ',':
 					tokens.push({ type: TokenType.Comma, value: ',', position: i });
 					break;
+				case ':':
+					tokens.push({ type: TokenType.Colon, value: ':', position: i });
+					break;
 				case '*':
 				case '+':
 					// Standalone multipliers (not after brackets)
 					tokens.push({ type: TokenType.Multiplier, value: char, position: i });
 					break;
 				default:
-					// Module names
+					// Module names or weight values
 					if (/[a-zA-Z0-9_]/.test(char)) {
-						let module = '';
+						let value = '';
 						const startPos = i;
 						while (i < input.length && /[a-zA-Z0-9_]/.test(input[i])) {
-							module += input[i];
+							value += input[i];
 							i++;
 						}
-						tokens.push({ type: TokenType.Module, value: module, position: startPos });
+
+						// Determine if this is a weight or a module name
+						const isNumeric = /^\d+$/.test(value);
+						const prevToken = tokens.length > 0 ? tokens[tokens.length - 1] : null;
+
+						if (isNumeric && prevToken && prevToken.type === TokenType.Colon) {
+							tokens.push({ type: TokenType.Weight, value, position: startPos });
+						} else {
+							tokens.push({ type: TokenType.Module, value, position: startPos });
+						}
+
 						i--; // Adjust for the loop increment
 					} else {
 						// Unrecognized character
@@ -188,15 +236,24 @@ class PCGFormatter {
 	// Validate the structure of the grammar based on tokens
 	private validateStructure(tokens: Token[]): void {
 		const brackets: { type: TokenType, position: number }[] = [];
+		let inStochasticChoice = false;
+		let moduleFollowedByColon = false;
 
 		for (let i = 0; i < tokens.length; i++) {
 			const token = tokens[i];
+			const nextToken = i + 1 < tokens.length ? tokens[i + 1] : null;
 
 			// Check opening brackets
 			if (token.type === TokenType.OpenSquareBracket ||
 				token.type === TokenType.OpenCurlyBracket ||
 				token.type === TokenType.OpenAngleBracket) {
 				brackets.push({ type: token.type, position: token.position });
+
+				// Track if we're entering a stochastic choice (curly bracket)
+				if (token.type === TokenType.OpenCurlyBracket) {
+					inStochasticChoice = true;
+					moduleFollowedByColon = false;
+				}
 			}
 
 			// Check closing brackets
@@ -218,6 +275,8 @@ class PCGFormatter {
 					if (lastBracket?.type !== TokenType.OpenCurlyBracket) {
 						this.addError(`Mismatched brackets: Expected closing ${this.bracketTypeToString(lastBracket?.type)} but found '}'`, token.position);
 					}
+					inStochasticChoice = false;
+					moduleFollowedByColon = false;
 				}
 			}
 			else if (token.type === TokenType.CloseAngleBracket) {
@@ -250,6 +309,42 @@ class PCGFormatter {
 				}
 			}
 
+			// Validate stochastic choice format {Module:Weight, Module:Weight}
+			if (inStochasticChoice) {
+				if (token.type === TokenType.Module) {
+					if (nextToken && nextToken.type !== TokenType.Colon && nextToken.type !== TokenType.Comma && nextToken.type !== TokenType.CloseCurlyBracket) {
+						this.addError(`In stochastic choice, module '${token.value}' must be followed by a colon, comma, or closing bracket`, token.position);
+					}
+					if (nextToken && nextToken.type === TokenType.Colon) {
+						moduleFollowedByColon = true;
+					}
+				} else if (token.type === TokenType.Colon) {
+					if (!nextToken || nextToken.type !== TokenType.Weight) {
+						this.addError(`In stochastic choice, colon must be followed by a weight value`, token.position);
+					}
+				} else if (token.type === TokenType.Weight) {
+					if (i === 0 || tokens[i - 1].type !== TokenType.Colon) {
+						this.addError(`Weight value must follow a colon in stochastic choice`, token.position);
+					}
+					moduleFollowedByColon = false;
+				}
+			}
+
+			// Validate angle brackets for priority selection
+			if (token.type === TokenType.OpenAngleBracket) {
+				let hasComma = false;
+				for (let j = i + 1; j < tokens.length && tokens[j].type !== TokenType.CloseAngleBracket; j++) {
+					if (tokens[j].type === TokenType.Comma) {
+						hasComma = true;
+						break;
+					}
+				}
+
+				if (!hasComma) {
+					this.addError(`Priority selection using angle brackets must contain multiple modules separated by commas`, token.position);
+				}
+			}
+
 			// Check for empty modules
 			if ((token.type === TokenType.OpenSquareBracket ||
 				token.type === TokenType.OpenCurlyBracket ||
@@ -277,6 +372,15 @@ class PCGFormatter {
 					this.addError(`Comma cannot appear directly before a closing bracket`, token.position);
 				}
 			}
+
+			// Check colon usage
+			if (token.type === TokenType.Colon) {
+				if (!inStochasticChoice) {
+					this.addError(`Colon can only be used in stochastic choice syntax (within curly brackets)`, token.position);
+				} else if (i === 0 || tokens[i - 1].type !== TokenType.Module) {
+					this.addError(`Colon must follow a module name in stochastic choice`, token.position);
+				}
+			}
 		}
 
 		// Check for unclosed brackets
@@ -301,32 +405,55 @@ class PCGFormatter {
 	private formatTokens(tokens: Token[]): string {
 		let result = '';
 		this.indentLevel = 0;
+		let inStochasticChoice = false;
 
 		for (let i = 0; i < tokens.length; i++) {
 			const token = tokens[i];
+			const prevToken = i > 0 ? tokens[i - 1] : null;
+			const nextToken = i + 1 < tokens.length ? tokens[i + 1] : null;
 
 			switch (token.type) {
 				case TokenType.OpenSquareBracket:
-				case TokenType.OpenCurlyBracket:
 				case TokenType.OpenAngleBracket:
 					// Add opening bracket with indent and increase indent level
 					result += this.getIndent() + token.value
-						+ (this.insertNewlineBeforeBrackets ? '\n' : '');
+
+					// Dont add new line if followed by a multiplier or a colon
+					if (nextToken && (nextToken.type === TokenType.Multiplier || nextToken.type === TokenType.Colon)) {
+						result += (this.insertNewlineBeforeBrackets ? '\n' : '');
+					}
 					this.indentLevel++;
 					break;
 
+				case TokenType.OpenCurlyBracket:
+					// Add opening curly bracket with indent and increase indent level
+					result += this.getIndent() + token.value + (this.insertNewlineBeforeBrackets ? '\n' : '');
+					this.indentLevel++;
+					inStochasticChoice = true;
+					break;
+
 				case TokenType.CloseSquareBracket:
-				case TokenType.CloseCurlyBracket:
 				case TokenType.CloseAngleBracket:
 					// Decrease indent level and add closing bracket
 					this.indentLevel--;
 					result += this.getIndent() + token.value;
 
-					// Add new line based on configuration
+					// Don't add newline if followed by a multiplier
+					if (nextToken && nextToken.type === TokenType.Multiplier) {
+						// Just wait for the multiplier handling
+					} else {
+						result += '\n';
+					}
+					break;
 
+				case TokenType.CloseCurlyBracket:
+					// Decrease indent level and add closing curly bracket
+					this.indentLevel--;
+					result += this.getIndent() + token.value;
+					inStochasticChoice = false;
 
 					// Don't add newline if followed by a multiplier
-					if (this.insertNewlineAfterBrackets && i + 1 < tokens.length && tokens[i + 1].type === TokenType.Multiplier) {
+					if (nextToken && nextToken.type === TokenType.Multiplier) {
 						// Just wait for the multiplier handling
 					} else {
 						result += '\n';
@@ -343,17 +470,39 @@ class PCGFormatter {
 					result += ',\n';
 					break;
 
+				case TokenType.Colon:
+					// Add colon with space for stochastic choice
+					result += ': ';
+					break;
+
+				case TokenType.Weight:
+					// Add weight
+					result += token.value;
+
+					// Add formatting based on what follows
+					if (nextToken) {
+						if (nextToken.type === TokenType.Comma) {
+							// No newline if followed by comma (comma will add it)
+						} else if (nextToken.type === TokenType.CloseCurlyBracket) {
+							result += '\n';
+						} else {
+							result += '\n';
+						}
+					} else {
+						result += '\n';
+					}
+					break;
+
 				case TokenType.Module:
 					// Add module with indent
 					result += this.getIndent() + token.value;
 
 					// Add appropriate formatting based on what follows
-					if (i + 1 < tokens.length) {
-						const nextToken = tokens[i + 1];
-						if (nextToken.type === TokenType.Multiplier) {
-							// No newline if followed by multiplier
-						} else if (nextToken.type === TokenType.Comma) {
-							// No newline if followed by comma (comma will add it)
+					if (nextToken) {
+						if (nextToken.type === TokenType.Multiplier ||
+							nextToken.type === TokenType.Colon ||
+							nextToken.type === TokenType.Comma) {
+							// No newline if followed by multiplier, colon or comma
 						} else {
 							result += '\n';
 						}
@@ -374,10 +523,6 @@ class PCGFormatter {
 
 	// Get the current indentation string
 	private getIndent(): string {
-		if (this.useTabs) {
-			return '\t'.repeat(this.indentLevel);
-		}
-		// Use spaces for indentation
 		return ' '.repeat(this.indentLevel * this.indentSize);
 	}
 
@@ -653,4 +798,8 @@ export function deactivate() {
 		diagnosticCollection.clear();
 		diagnosticCollection.dispose();
 	}
+}
+// Show welcome message
+export function showWelcomeMessage() {
+	vscode.window.showInformationMessage('Welcome to PCG Grammar Formatter! Use the command "PCG Formatter: Format" to format your grammar.');
 }
