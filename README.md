@@ -8,13 +8,13 @@ These grammars are used to generate procedural content, such as levels, assets, 
 
 ## Features
 
-* **Format PCG Grammar**: The extension provides a command to format PCG Grammar files, making them more readable and consistent.
+* **Format PCG Grammar**: The extension provides a command to format PCG Grammar, making them more readable and consistent.
+**Syntax Highlighting**: Syntax highlighting for PCG Grammar, providing visual cues for different modules. 
+**Code Snippets**: Code snippets for common PCG Grammar constructs
+**Error Checking**: Error checking for PCG Grammar files,finding uncomplete or incorrect grammar definitions.
 
-## Future Features
+## Futures Features
 
-- [ ] **Syntax Highlighting**: Syntax highlighting for PCG Grammar, providing visual cues for different modules. 
-- [ ] **Code Snippets**: Code snippets for common PCG Grammar constructs
-- [ ] **Error Checking**: Error checking for PCG Grammar files,finding uncomplete or incorrect grammar definitions.
 - [ ]  **Unreal Engine Integration**: Integration with Unreal Engine to provide real-time feedback and validation of PCG Grammar files.
 
 <!-- \!\[feature X\]\(images/feature-x.png\) -->
@@ -55,6 +55,8 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Contributing
 
 Contributions are welcome! If you have suggestions for improvements or new features, please open an issue or submit a pull request on the [GitHub repository]()
+
+This project (tries to) follows  the conventional commits specifications https://www.conventionalcommits.org/en/v1.0.0/
 
 ## PCG Grammar Resources
 
