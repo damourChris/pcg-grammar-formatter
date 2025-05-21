@@ -451,9 +451,10 @@ class PCGFormatter {
 					this.indentLevel--;
 					result += this.getIndent() + token.value;
 
-					// Dont add new line if followed by a multiplier or a colon
+					// Dont add new line if followed by a multiplier, colon or a comma
 					if (nextToken && (nextToken.type === TokenType.Multiplier
-						|| nextToken.type === TokenType.Colon)) {
+						|| nextToken.type === TokenType.Colon
+						|| nextToken.type === TokenType.Comma)) {
 
 					} else if (nextToken) {
 						result += (this.insertNewlineBeforeBrackets ? '\n' : '');
@@ -468,7 +469,9 @@ class PCGFormatter {
 					inStochasticChoice = false;
 
 					// Don't add newline if followed by a multiplier
-					if (nextToken && nextToken.type === TokenType.Multiplier) {
+					if (nextToken && (nextToken.type === TokenType.Multiplier
+						|| nextToken.type === TokenType.Colon
+						|| nextToken.type === TokenType.Comma)) {
 						// Just wait for the multiplier handling
 					} else {
 						result += '\n';
@@ -477,7 +480,16 @@ class PCGFormatter {
 
 				case TokenType.Multiplier:
 					// Add multiplier directly after previous token (no newline before)
-					result += token.value + '\n';
+
+					result += token.value;
+
+					// Dont add newline if followed by a comma
+					if (nextToken && nextToken.type === TokenType.Comma) {
+						// No newline
+					} else if (nextToken) {
+						result += '\n';
+					}
+
 					break;
 
 				case TokenType.Comma:
