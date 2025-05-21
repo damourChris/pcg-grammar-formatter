@@ -33,14 +33,32 @@ let diagnosticCollection: vscode.DiagnosticCollection;
 
 // PCG Grammar Formatter Class
 class PCGFormatter {
+	private enabled: boolean;
+	private formatOnSave: boolean;
 	private indentSize: number;
 	private indentLevel: number;
+	private useTabs: boolean;
+	private maxLineLength: number;
+	private insertNewlineAfterBrackets: boolean;
+	private insertNewlineBeforeBrackets: boolean;
+	private insertFinalNewline: boolean;
+	private trimTrailingWhitespace: boolean;
+
 	private errors: PCGError[];
 	private document?: vscode.TextDocument;
 
 	constructor(indentSize: number = 2) {
 		this.indentSize = indentSize;
 		this.indentLevel = 0;
+		this.enabled = true;
+		this.formatOnSave = false;
+		this.useTabs = false;
+		this.maxLineLength = 80;
+		this.insertNewlineAfterBrackets = true;
+		this.insertNewlineBeforeBrackets = true;
+		this.insertFinalNewline = true;
+		this.trimTrailingWhitespace = true;
+
 		this.errors = [];
 	}
 
@@ -292,7 +310,8 @@ class PCGFormatter {
 				case TokenType.OpenCurlyBracket:
 				case TokenType.OpenAngleBracket:
 					// Add opening bracket with indent and increase indent level
-					result += this.getIndent() + token.value + '\n';
+					result += this.getIndent() + token.value
+						+ (this.insertNewlineBeforeBrackets ? '\n' : '');
 					this.indentLevel++;
 					break;
 
@@ -303,8 +322,11 @@ class PCGFormatter {
 					this.indentLevel--;
 					result += this.getIndent() + token.value;
 
+					// Add new line based on configuration
+
+
 					// Don't add newline if followed by a multiplier
-					if (i + 1 < tokens.length && tokens[i + 1].type === TokenType.Multiplier) {
+					if (this.insertNewlineAfterBrackets && i + 1 < tokens.length && tokens[i + 1].type === TokenType.Multiplier) {
 						// Just wait for the multiplier handling
 					} else {
 						result += '\n';
@@ -352,18 +374,29 @@ class PCGFormatter {
 
 	// Get the current indentation string
 	private getIndent(): string {
+		if (this.useTabs) {
+			return '\t'.repeat(this.indentLevel);
+		}
+		// Use spaces for indentation
 		return ' '.repeat(this.indentLevel * this.indentSize);
 	}
 
 	// Clean up the formatted result
 	private cleanupResult(result: string): string {
 		// Clean up extra newlines and formatting issues
-		return result
-			.split('\n')
-			.map(line => line.trimRight())
-			.filter(line => line.trim() !== '')
-			.join('\n')
-			.trim();
+		const newResult = result
+			.replace(/\n{2,}/g, '\n'); // Remove extra newlines
+
+		// Trim trailing whitespace if configured
+		if (this.trimTrailingWhitespace) {
+			return newResult.replace(/\s+$/, '');
+		}
+
+		// Add final newline if configured
+		if (this.insertFinalNewline) {
+			return newResult + '\n';
+		}
+		return newResult;
 	}
 
 	// Add error to the error list
@@ -401,6 +434,15 @@ export function activate(context: vscode.ExtensionContext) {
 	// Register configuration
 	const config = vscode.workspace.getConfiguration('pcgFormatter');
 	const defaultIndentSize = config.get('indentSize', 2);
+	const formatOnSave = config.get('formatOnSave', false);
+
+	const useTabs = config.get('useTabs', false);
+	const maxLineLength = config.get('maxLineLength', 80);
+	const insertNewlineAfterBrackets = config.get('insertNewlineAfterBrackets', true);
+	const insertNewlineBeforeBrackets = config.get('insertNewlineBeforeBrackets', true);
+	const insertFinalNewline = config.get('insertFinalNewline', true);
+	const trimTrailingWhitespace = config.get('trimTrailingWhitespace', true);
+
 
 	// Register the format command
 	const formatCommand = vscode.commands.registerCommand('pcg-formatter.format', () => {
@@ -573,6 +615,17 @@ export function activate(context: vscode.ExtensionContext) {
 					diagnosticCollection.set(document.uri, diagnostics);
 				}
 			}
+
+			// Focus editor pointer to the start of the document
+			const editor = vscode.window.activeTextEditor;
+			if (editor) {
+				editor.revealRange(new vscode.Range(0, 0, 0, 0));
+			}
+			// // Show success in status bar
+			// statusBarItem.text = '$(check) PCG Formatted';
+
+			// Clear previous diagnostics
+			diagnosticCollection.clear();
 
 			// Return the edit
 			return [

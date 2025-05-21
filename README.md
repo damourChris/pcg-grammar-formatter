@@ -31,7 +31,8 @@ These grammars are used to generate procedural content, such as levels, assets, 
 * `pcgGrammarFormatter.formatOnSave`: Enable or disable formatting on save.
 * `pcgGrammarFormatter.indentSize`: Set the number of spaces to use for indentation.
 * `pcgGrammarFormatter.useTabs`: Use tabs instead of spaces for indentation.
-* `pcgGrammarFormatter.maxLineLength`: Set the maximum line length for formatting.
+* `pcgGrammarFormatter.insertNewLineBeforeBrackets`: Insert a newline before opening brackets.
+* `pcgGrammarFormatter.insertNewLineAfterBrackets`: Insert a newline after closing brackets.
 * `pcgGrammarFormatter.insertFinalNewline`: Insert a final newline at the end of the file.
 * `pcgGrammarFormatter.trimTrailingWhitespace`: Trim trailing whitespace on each line.
 
