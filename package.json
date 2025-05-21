@@ -2,7 +2,7 @@
   "name": "pcg-grammar-formatter",
   "displayName": "PCG Grammar Formatter",
   "description": "Formatter to pretty print PCG Grammars",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "engines": {
     "vscode": "^1.100.0"
   },
