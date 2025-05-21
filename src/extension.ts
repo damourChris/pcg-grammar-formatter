@@ -58,15 +58,14 @@ class PCGFormatter {
 		this.useTabs = useTabs;
 		this.maxLineLength = maxLineLength;
 		this.indentLevel = 0;
-		this.enabled = true;
-		this.formatOnSave = false;
-		this.useTabs = false;
-		this.maxLineLength = 80;
-		this.insertNewlineAfterBrackets = true;
-		this.insertNewlineBeforeBrackets = true;
-		this.insertFinalNewline = true;
-		this.trimTrailingWhitespace = true;
-
+		this.insertNewlineAfterBrackets = insertNewlineAfterBrackets;
+		this.insertNewlineBeforeBrackets = insertNewlineBeforeBrackets;
+		this.insertFinalNewline = insertFinalNewline;
+		this.trimTrailingWhitespace = trimTrailingWhitespace;
+		this.enabled = enable;
+		this.document = undefined;
+		this.wordPatterns = {};
+		this.lastFormatTime = 0;
 		this.errors = [];
 	}
 
@@ -416,12 +415,7 @@ class PCGFormatter {
 				case TokenType.OpenSquareBracket:
 				case TokenType.OpenAngleBracket:
 					// Add opening bracket with indent and increase indent level
-					result += this.getIndent() + token.value
-
-					// Dont add new line if followed by a multiplier or a colon
-					if (nextToken && (nextToken.type === TokenType.Multiplier || nextToken.type === TokenType.Colon)) {
-						result += (this.insertNewlineBeforeBrackets ? '\n' : '');
-					}
+					result += this.getIndent() + token.value;
 					this.indentLevel++;
 					break;
 
@@ -438,12 +432,13 @@ class PCGFormatter {
 					this.indentLevel--;
 					result += this.getIndent() + token.value;
 
-					// Don't add newline if followed by a multiplier
-					if (nextToken && nextToken.type === TokenType.Multiplier) {
-						// Just wait for the multiplier handling
-					} else {
-						result += '\n';
+					// Dont add new line if followed by a multiplier or a colon
+					if (nextToken && (nextToken.type === TokenType.Multiplier || nextToken.type === TokenType.Colon)) {
+
+					} else if (nextToken) {
+						result += (this.insertNewlineBeforeBrackets ? '\n' : '');
 					}
+
 					break;
 
 				case TokenType.CloseCurlyBracket:
@@ -562,6 +557,49 @@ class PCGFormatter {
 	}
 }
 
+// Custom syntax highlighting provider
+class PCGSyntaxHighlightProvider implements vscode.DocumentSemanticTokensProvider {
+	private legend: vscode.SemanticTokensLegend;
+	private tokenTypes = ['module'];
+	private tokenModifiers = ['declaration', 'definition'];
+	private formatter: PCGFormatter;
+
+	constructor(formatter: PCGFormatter) {
+		this.legend = new vscode.SemanticTokensLegend(this.tokenTypes, this.tokenModifiers);
+		this.formatter = formatter;
+	}
+
+	getLegend(): vscode.SemanticTokensLegend {
+		return this.legend;
+	}
+
+	provideDocumentSemanticTokens(document: vscode.TextDocument): vscode.ProviderResult<vscode.SemanticTokens> {
+		const tokensBuilder = new vscode.SemanticTokensBuilder(this.legend);
+		const text = document.getText();
+
+		// Extract module patterns
+		const modules = this.formatter.getWordPatterns();
+
+		for (const module in modules) {
+			const pattern = new RegExp(`\\b${module}\\b`, 'g');
+			let match;
+
+			while ((match = pattern.exec(text)) !== null) {
+				const startPos = document.positionAt(match.index);
+				tokensBuilder.push(
+					startPos.line,
+					startPos.character,
+					match[0].length,
+					0, // moduleType
+					0  // no modifiers
+				);
+			}
+		}
+
+		return tokensBuilder.build();
+	}
+}
+
 // Extension activation
 export function activate(context: vscode.ExtensionContext) {
 	// Create diagnostic collection for errors
@@ -581,6 +619,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const defaultIndentSize = config.get('indentSize', 2);
 	const formatOnSave = config.get('formatOnSave', false);
 
+	const enabled = config.get('enabled', true);
 	const useTabs = config.get('useTabs', false);
 	const maxLineLength = config.get('maxLineLength', 80);
 	const insertNewlineAfterBrackets = config.get('insertNewlineAfterBrackets', true);
@@ -588,6 +627,21 @@ export function activate(context: vscode.ExtensionContext) {
 	const insertFinalNewline = config.get('insertFinalNewline', true);
 	const trimTrailingWhitespace = config.get('trimTrailingWhitespace', true);
 
+	// Show welcome message
+	if (vscode.workspace.getConfiguration('pcgFormatter').get('showWelcomeMessage', true)) {
+		vscode.window.showInformationMessage('Welcome to PCG Grammar Formatter! Use the command "PCG Formatter: Format" to format your grammar.');
+	}
+	const formatter = new PCGFormatter(
+		enabled,
+		defaultIndentSize,
+		formatOnSave,
+		useTabs,
+		maxLineLength,
+		insertNewlineAfterBrackets,
+		insertNewlineBeforeBrackets,
+		insertFinalNewline,
+		trimTrailingWhitespace
+	);
 
 	// Register the format command
 	const formatCommand = vscode.commands.registerCommand('pcg-formatter.format', () => {
@@ -626,8 +680,7 @@ export function activate(context: vscode.ExtensionContext) {
 			const config = vscode.workspace.getConfiguration('pcgFormatter');
 			const indentSize = config.get('indentSize', defaultIndentSize);
 
-			// Create formatter and format text
-			const formatter = new PCGFormatter(indentSize);
+			// Format text
 			const result = formatter.format(textToFormat, document);
 
 			// Apply the formatting
@@ -693,7 +746,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 		try {
 			// Check the document without formatting
-			const formatter = new PCGFormatter(defaultIndentSize);
 			const result = formatter.format(text, document);
 
 			// Display errors if any
@@ -724,78 +776,153 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	// Register for configuration changes
-	context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
-		if (event.affectsConfiguration('pcgFormatter')) {
-			const config = vscode.workspace.getConfiguration('pcgFormatter');
-			// Update any configuration dependent state here
+	// Register a command to generate example templates
+	const insertTemplateCommand = vscode.commands.registerCommand('pcg-formatter.insertTemplate', async () => {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) {
+			vscode.window.showErrorMessage('No active editor found');
+			return;
 		}
-	}));
 
-	// Register document formatter provider
-	const formatterProvider = vscode.languages.registerDocumentFormattingEditProvider(['pcg', 'pcggrammar'], {
-		provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {
-			// Get current configuration
-			const config = vscode.workspace.getConfiguration('pcgFormatter');
-			const indentSize = config.get('indentSize', defaultIndentSize);
-
-			const formatter = new PCGFormatter(indentSize);
-			const text = document.getText();
-			const result = formatter.format(text, document);
-
-			// Display errors if any
-			if (result.errors.length > 0) {
-				// Convert errors to diagnostics
-				const diagnostics = result.errors
-					.filter(error => error.range !== undefined)
-					.map(error => {
-						return new vscode.Diagnostic(
-							error.range!,
-							error.message,
-							vscode.DiagnosticSeverity.Error
-						);
-					});
-
-				if (diagnostics.length > 0) {
-					diagnosticCollection.set(document.uri, diagnostics);
-				}
+		// Define templates
+		const templates = [
+			{
+				label: "Basic Module Combination",
+				description: "Use square brackets to combine modules",
+				template: "[ModuleA, ModuleB]"
+			},
+			{
+				label: "Module with Repetition",
+				description: "Use * to place a module as many times as possible",
+				template: "ModuleA*"
+			},
+			{
+				label: "Module with At Least One Repetition",
+				description: "Use + to place a module at least once",
+				template: "ModuleA+"
+			},
+			{
+				label: "Module with Specific Repetition",
+				description: "Use number to place a module exactly N times",
+				template: "ModuleA3"
+			},
+			{
+				label: "Stochastic Choice",
+				description: "Use curly brackets for weighted random choices",
+				template: "{ModuleA:1, ModuleB:2, ModuleC:10}"
+			},
+			{
+				label: "Priority Selection",
+				description: "Use angle brackets for priority-based placement",
+				template: "<ModuleA, ModuleB, ModuleC>"
+			},
+			{
+				label: "Complex Structure",
+				description: "Combine different PCG syntax elements",
+				template: "[\n  {ModuleA:1, ModuleB:2}2,\n  <ModuleC, ModuleD>*\n]+"
 			}
+		];
 
-			// Focus editor pointer to the start of the document
-			const editor = vscode.window.activeTextEditor;
-			if (editor) {
-				editor.revealRange(new vscode.Range(0, 0, 0, 0));
-			}
-			// // Show success in status bar
-			// statusBarItem.text = '$(check) PCG Formatted';
+		// Show quick pick with templates
+		const selected = await vscode.window.showQuickPick(templates, {
+			placeHolder: 'Select a PCG template to insert'
+		});
 
-			// Clear previous diagnostics
-			diagnosticCollection.clear();
-
-			// Return the edit
-			return [
-				vscode.TextEdit.replace(
-					new vscode.Range(
-						document.positionAt(0),
-						document.positionAt(text.length)
-					),
-					result.formattedText
-				)
-			];
+		if (selected) {
+			editor.edit(editBuilder => {
+				editBuilder.insert(editor.selection.active, selected.template);
+			});
 		}
 	});
 
-	context.subscriptions.push(formatterProvider, formatCommand, checkCommand);
+	// Register a command to toggle comment
+	const toggleCommentCommand = vscode.commands.registerCommand('pcg-formatter.toggleComment', () => {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) {
+			return;
+		}
 
-	// Show activation message
-	console.log('PCG Grammar Formatter extension is now active!');
+		const document = editor.document;
+		const selection = editor.selection;
+
+		editor.edit(editBuilder => {
+			if (selection.isEmpty) {
+				// Toggle comment for current line
+				const line = document.lineAt(selection.active.line);
+				if (line.text.trimStart().startsWith('//')) {
+					// Uncomment
+					const commentStart = line.text.indexOf('//');
+					editBuilder.delete(new vscode.Range(
+						new vscode.Position(line.lineNumber, commentStart),
+						new vscode.Position(line.lineNumber, commentStart + 2)
+					));
+				} else {
+					// Comment
+					editBuilder.insert(new vscode.Position(line.lineNumber, 0), '// ');
+				}
+			} else {
+				// Toggle comment for selected lines
+				for (let i = selection.start.line; i <= selection.end.line; i++) {
+					const line = document.lineAt(i);
+					if (line.text.trimStart().startsWith('//')) {
+						// Uncomment
+						const commentStart = line.text.indexOf('//');
+						editBuilder.delete(new vscode.Range(
+							new vscode.Position(i, commentStart),
+							new vscode.Position(i, commentStart + 2)
+						));
+					} else {
+						// Comment
+						editBuilder.insert(new vscode.Position(i, 0), '// ');
+					}
+				}
+			}
+		});
+	});
+
+	// Register real-time validation
+	const validateOnChangeDisposable = vscode.workspace.onDidChangeTextDocument((event) => {
+		const document = event.document;
+		if (document.languageId !== 'pcg' && document.languageId !== 'pcggrammar') {
+			return;
+		}
+
+		// Debounce to avoid too frequent
+		if (Date.now() - formatter.getLastFormatTime() < 1000) {
+			return;
+		}
+		const text = document.getText();
+		const result = formatter.format(text, document);
+		const diagnostics = result.errors
+			.filter(error => error.range !== undefined)
+			.map(error => {
+				return new vscode.Diagnostic(
+					error.range!,
+					error.message,
+					vscode.DiagnosticSeverity.Error
+				);
+			});
+		diagnosticCollection.set(document.uri, diagnostics);
+	});
+	context.subscriptions.push(formatCommand);
+	context.subscriptions.push(checkCommand);
+	context.subscriptions.push(insertTemplateCommand);
+	context.subscriptions.push(toggleCommentCommand);
+	context.subscriptions.push(validateOnChangeDisposable);
+
+	// Clean up on extension deactivation
+	context.subscriptions.push({
+		dispose: () => {
+			diagnosticCollection.dispose();
+			validateOnChangeDisposable.dispose();
+		}
+	});
 }
 
-// Extension deactivation
+
 export function deactivate() {
-	console.log('PCG Grammar Formatter extension is now deactivated!');
+	// Clean up resources if needed
 	if (diagnosticCollection) {
-		diagnosticCollection.clear();
 		diagnosticCollection.dispose();
 	}
 }
@@ -803,3 +930,5 @@ export function deactivate() {
 export function showWelcomeMessage() {
 	vscode.window.showInformationMessage('Welcome to PCG Grammar Formatter! Use the command "PCG Formatter: Format" to format your grammar.');
 }
+
+// Show welcome message on activatio
