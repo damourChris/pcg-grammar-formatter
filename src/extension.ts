@@ -30,6 +30,8 @@ interface PCGError {
 	range?: vscode.Range;
 }
 
+const MODULE_REGEX = /[a-zA-Z0-9_-]/;
+
 // Diagnostic collection for error tracking
 let diagnosticCollection: vscode.DiagnosticCollection;
 
@@ -97,8 +99,10 @@ class PCGFormatter {
 
 	// Extract module patterns for syntax highlighting
 	private extractModulePatterns(input: string): void {
-		const moduleRegex = /[a-zA-Z0-9_]+/g;
+		const moduleRegex = new RegExp(MODULE_REGEX, 'g');
+
 		let match;
+
 
 		while ((match = moduleRegex.exec(input)) !== null) {
 			const module = match[0];
@@ -200,10 +204,10 @@ class PCGFormatter {
 					break;
 				default:
 					// Module names or weight values
-					if (/[a-zA-Z0-9_]/.test(char)) {
+					if (MODULE_REGEX.test(char)) {
 						let value = '';
 						const startPos = i;
-						while (i < input.length && /[a-zA-Z0-9_]/.test(input[i])) {
+						while (i < input.length && MODULE_REGEX.test(input[i])) {
 							value += input[i];
 							i++;
 						}
@@ -311,10 +315,17 @@ class PCGFormatter {
 			// Validate stochastic choice format {Module:Weight, Module:Weight}
 			if (inStochasticChoice) {
 				if (token.type === TokenType.Module) {
-					if (nextToken && nextToken.type !== TokenType.Colon && nextToken.type !== TokenType.Comma && nextToken.type !== TokenType.CloseCurlyBracket) {
+					if (nextToken
+						&& nextToken.type !== TokenType.Colon
+						&& nextToken.type !== TokenType.Comma
+						&& nextToken.type !== TokenType.CloseCurlyBracket
+						&& nextToken.type !== TokenType.CloseSquareBracket
+						&& nextToken.type !== TokenType.Weight
+						&& !moduleFollowedByColon) {
 						this.addError(`In stochastic choice, module '${token.value}' must be followed by a colon, comma, or closing bracket`, token.position);
 					}
-					if (nextToken && nextToken.type === TokenType.Colon) {
+					if (nextToken
+						&& nextToken.type === TokenType.Colon) {
 						moduleFollowedByColon = true;
 					}
 				} else if (token.type === TokenType.Colon) {
@@ -376,7 +387,15 @@ class PCGFormatter {
 			if (token.type === TokenType.Colon) {
 				if (!inStochasticChoice) {
 					this.addError(`Colon can only be used in stochastic choice syntax (within curly brackets)`, token.position);
-				} else if (i === 0 || tokens[i - 1].type !== TokenType.Module) {
+				} else if (i === 0
+					&& tokens[i - 1].type !== TokenType.Module
+					&& tokens[i - 1].type !== TokenType.Weight
+					&& tokens[i - 1].type !== TokenType.Colon
+					&& tokens[i - 1].type !== TokenType.CloseCurlyBracket
+					&& tokens[i - 1].type !== TokenType.CloseSquareBracket
+					&& tokens[i - 1].type !== TokenType.CloseAngleBracket
+					&& tokens[i - 1].type !== TokenType.Multiplier
+				) {
 					this.addError(`Colon must follow a module name in stochastic choice`, token.position);
 				}
 			}
@@ -415,7 +434,7 @@ class PCGFormatter {
 				case TokenType.OpenSquareBracket:
 				case TokenType.OpenAngleBracket:
 					// Add opening bracket with indent and increase indent level
-					result += this.getIndent() + token.value;
+					result += this.getIndent() + token.value + (this.insertNewlineAfterBrackets ? '\n' : '');
 					this.indentLevel++;
 					break;
 
@@ -433,7 +452,8 @@ class PCGFormatter {
 					result += this.getIndent() + token.value;
 
 					// Dont add new line if followed by a multiplier or a colon
-					if (nextToken && (nextToken.type === TokenType.Multiplier || nextToken.type === TokenType.Colon)) {
+					if (nextToken && (nextToken.type === TokenType.Multiplier
+						|| nextToken.type === TokenType.Colon)) {
 
 					} else if (nextToken) {
 						result += (this.insertNewlineBeforeBrackets ? '\n' : '');
