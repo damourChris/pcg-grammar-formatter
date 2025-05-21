@@ -8,10 +8,10 @@ These grammars are used to generate procedural content, such as levels, assets, 
 
 ## Features
 
-* **Format PCG Grammar**: The extension provides a command to format PCG Grammar, making them more readable and consistent.
-**Syntax Highlighting**: Syntax highlighting for PCG Grammar, providing visual cues for different modules. 
-**Code Snippets**: Code snippets for common PCG Grammar constructs
-**Error Checking**: Error checking for PCG Grammar files,finding uncomplete or incorrect grammar definitions.
+- **Format PCG Grammar**: The extension provides a command to format PCG Grammar, making them more readable and consistent.
+- **Syntax Highlighting**: Syntax highlighting for PCG Grammar, providing visual cues for different modules. 
+- **Code Snippets**: Code snippets for common PCG Grammar constructs
+- **Error Checking**: Error checking for PCG Grammar files,finding uncomplete or incorrect grammar definitions.
 
 ## Futures Features
 
