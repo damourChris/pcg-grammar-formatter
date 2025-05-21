@@ -46,11 +46,6 @@ These grammars are used to generate procedural content, such as levels, assets, 
 Full changelog is available [here]()(CHANGELOG.md).
 ---
 
-## Most recent release notes
-
-### 0.0.1
-* Initial release of the PCG Grammar Formatter extension for Visual Studio Code.
-
 # Extra Information
 
 ## License
