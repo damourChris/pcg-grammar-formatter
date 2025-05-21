@@ -20,11 +20,18 @@
     "commands": [
       {
         "command": "pcg-formatter.format",
-        "title": "Format PCG Grammar"
+        "title": "Format PCG Grammar",
+        "category": "PCG Grammar Formatter"
       },
       {
         "command": "pcg-formatter.check",
-        "title": "Check PCG Grammar Syntax"
+        "title": "Check PCG Grammar Syntax",
+        "category": "PCG Grammar Formatter"
+      },
+      {
+        "command": "pcg-formatter.toggleComment",
+        "title": "Toggle Comment",
+        "category": "PCG Grammar Formatter"
       }
     ],
     "keybindings": [
@@ -41,6 +48,13 @@
         "path": "./snippets/snippets.json"
       }
     ],
+    "grammars": [
+      {
+        "language": "pcggrammar",
+        "scopeName": "source.pcggrammar",
+        "path": "/syntaxes/pcggrammar.tmLanguage.json"
+      }
+    ],
     "languages": [
       {
         "id": "pcggrammar",
@@ -51,7 +65,7 @@
           "PCG Grammar",
           "pcggrammar"
         ],
-        "configuration": "./syntaxes/pcggrammar.tmLanguage.json"
+        "configuration": "./language-configuration.json"
       }
     ],
     "menus": {
