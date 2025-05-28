@@ -43,7 +43,7 @@ These grammars are used to generate procedural content, such as levels, assets, 
 
 # Release Notes
 
-Full changelog is available [here]()(CHANGELOG.md).
+Full changelog is available [here](CHANGELOG.md).
 ---
 
 # Extra Information
